@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaTrack | Gamified Water Conservation Portal (SDG 6)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        aqua: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        eco: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        }
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+                            '50%': { opacity: '0.85', transform: 'scale(1.02)' }
+                        }
+                    },
+                    animation: {
+                        float: 'float 3s ease-in-out infinite',
+                        pulseGlow: 'pulseGlow 2s infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        
+        .toast-enter {
+            animation: slideInRight 0.3s ease-out forwards;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-aqua-500 selection:text-white">
+
+    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-3 max-w-sm pointer-events-none"></div>
+
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('home')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-aqua-600 to-aqua-400 flex items-center justify-center text-white shadow-md shadow-aqua-500/20">
+                        <i class="fa-solid font-bold fa-droplet text-xl animate-float"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-aqua-700 to-aqua-500 bg-clip-text text-transparent">AquaTrack</span>
+                        <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 ml-2 bg-eco-100 text-eco-700 rounded-full border border-eco-500/20">SDG 6 Portal</span>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex space-x-1 lg:space-x-2">
+                    <button id="nav-home" onclick="switchTab('home')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition-colors text-aqua-600 bg-aqua-50">
+                        <i class="fa-solid fa-house mr-1.5"></i> Overview
+                    </button>
+                    <button id="nav-dashboard" onclick="switchTab('dashboard')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-aqua-600 hover:bg-slate-50 transition-colors">
+                        <i class="fa-solid fa-chart-line mr-1.5"></i> Dashboard
+                    </button>
+                    <button id="nav-reports" onclick="switchTab('reports')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-aqua-600 hover:bg-slate-50 transition-colors">
+                        <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Leak Reporting
+                    </button>
+                    <button id="nav-gamification" onclick="switchTab('gamification')" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-aqua-600 hover:bg-slate-50 transition-colors">
+                        <i class="fa-solid fa-trophy mr-1.5"></i> Leaderboard
+                    </button>
+                </nav>
+
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center bg-slate-100 rounded-full px-3 py-1.5 border border-slate-200 text-xs sm:text-sm">
+                        <div class="flex items-center space-x-1.5 mr-3" title="Total Gamification Points">
+                            <i class="fa-solid fa-coins text-amber-500"></i>
+                            <span id="nav-user-points" class="font-bold text-slate-800">340</span>
+                            <span class="text-slate-400 text-xs">XP</span>
+                        </div>
+                        <div class="flex items-center space-x-1 border-l border-slate-300 pl-3" title="Current Daily Streak">
+                            <i class="fa-solid fa-fire text-orange-500"></i>
+                            <span id="nav-user-streak" class="font-bold text-slate-800">5</span>
+                            <span class="text-slate-400 text-xs hidden sm:inline">d</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Hamburger Toggle Button -->
+                    <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-4 pt-2 pb-4 space-y-1">
+            <button onclick="switchTab('home'); toggleMobileMenu();" class="mobile-nav-btn w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100 flex items-center">
+                <i class="fa-solid fa-house w-6 text-aqua-600"></i> Overview
+            </button>
+            <button onclick="switchTab('dashboard'); toggleMobileMenu();" class="mobile-nav-btn w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100 flex items-center">
+                <i class="fa-solid fa-chart-line w-6 text-aqua-600"></i> Dashboard & Meter
+            </button>
+            <button onclick="switchTab('reports'); toggleMobileMenu();" class="mobile-nav-btn w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100 flex items-center">
+                <i class="fa-solid fa-triangle-exclamation w-6 text-aqua-600"></i> Wastage Reporting
+            </button>
+            <button onclick="switchTab('gamification'); toggleMobileMenu();" class="mobile-nav-btn w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100 flex items-center">
+                <i class="fa-solid fa-trophy w-6 text-aqua-600"></i> Gamification & Leaderboard
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT VIEWS CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ================================================================= -->
+        <!-- VIEW 1: HOME / OVERVIEW SCREEN -->
+        <!-- ================================================================= -->
+        <section id="view-home" class="space-y-10">
+            <!-- Hero Banner -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-aqua-950 to-aqua-900 text-white p-8 sm:p-12 shadow-xl border border-slate-800">
+                <div class="absolute -right-10 -bottom-10 w-80 h-80 bg-aqua-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute right-1/3 -top-10 w-60 h-60 bg-eco-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="relative z-10 max-w-3xl space-y-6">
+                    <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold text-aqua-200">
+                        <i class="fa-solid fa-earth-americas text-eco-400"></i>
+                        <span>United Nations SDG 6: Clean Water and Sanitation</span>
+                    </div>
+
+                    <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                        Transform Water Monitoring Into <span class="bg-gradient-to-r from-aqua-300 to-eco-400 bg-clip-text text-transparent">Actionable Impact</span>
+                    </h1>
+
+                    <p class="text-slate-300 text-base sm:text-lg leading-relaxed">
+                        Every drop counts. AquaTrack empowers students, facilities, and communities to track water usage, report leaks instantly, and earn points while conserving earth's most vital resource.
+                    </p>
+
+                    <div class="flex flex-wrap gap-4 pt-2">
+                        <button onclick="switchTab('dashboard')" class="px-6 py-3 rounded-xl bg-aqua-500 hover:bg-aqua-400 text-white font-semibold shadow-lg shadow-aqua-500/30 transition-all flex items-center space-x-2 transform hover:-translate-y-0.5">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Log Meter Reading</span>
+                        </button>
+                        <button onclick="switchTab('reports')" class="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold backdrop-blur-md border border-white/20 transition-all flex items-center space-x-2 transform hover:-translate-y-0.5">
+                            <i class="fa-solid fa-flag"></i>
+                            <span>Report a Leak (+50 XP)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Community Impact Counters -->
+                <div class="mt-10 pt-8 border-t border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div class="bg-white/5 rounded-2xl p-4 backdrop-blur-sm border border-white/5">
+                        <div id="stat-total-saved" class="text-2xl sm:text-3xl font-black text-aqua-300">14,250 L</div>
+                        <div class="text-xs text-slate-400 font-medium mt-1">Water Conserved</div>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-4 backdrop-blur-sm border border-white/5">
+                        <div id="stat-active-monitors" class="text-2xl sm:text-3xl font-black text-eco-400">328</div>
+                        <div class="text-xs text-slate-400 font-medium mt-1">Active Campus Monitors</div>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-4 backdrop-blur-sm border border-white/5">
+                        <div id="stat-resolved-leaks" class="text-2xl sm:text-3xl font-black text-amber-400">48</div>
+                        <div class="text-xs text-slate-400 font-medium mt-1">Leaks Repaired</div>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-4 backdrop-blur-sm border border-white/5">
+                        <div id="stat-efficiency-rate" class="text-2xl sm:text-3xl font-black text-indigo-300">89%</div>
+                        <div class="text-xs text-slate-400 font-medium mt-1">Conservation Efficiency</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Problem & Target Users Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Environmental Challenge Card -->
+                <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3">The Problem: Water Wastage</h2>
+                        <p class="text-slate-600 leading-relaxed mb-4">
+                            Institutional campuses and residential complexes lose up to <span class="font-semibold text-red-600">30% of supplied water</span> due to unmonitored pipe fractures, running flush tanks, overflowing overhead reservoirs, and lack of individual usage accountability.
+                        </p>
+                        <ul class="space-y-2 text-sm text-slate-600">
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-circle-xmark text-red-500 mt-1 mr-2"></i>
+                                <span><strong>Delayed Leak Identification:</strong> Minor dripping taps waste 15+ liters per day when unreported.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-circle-xmark text-red-500 mt-1 mr-2"></i>
+                                <span><strong>Zero Feedback Loop:</strong> Residents remain unaware of their daily volumetric consumption.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-circle-xmark text-red-500 mt-1 mr-2"></i>
+                                <span><strong>Lack of Incentive:</strong> No rewards for adopting water-wise habits.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Target Users Breakdown -->
+                <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-aqua-100 text-aqua-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-800 mb-3">Who Is This Built For?</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <div class="p-2 bg-aqua-500 text-white rounded-lg text-sm"><i class="fa-solid fa-graduation-cap"></i></div>
+                                <div>
+                                    <h3 class="font-semibold text-slate-800 text-sm">College Students & Dorm Residents</h3>
+                                    <p class="text-xs text-slate-500">Monitor room water meters, log readings, compete in dorm leaderboards.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <div class="p-2 bg-eco-500 text-white rounded-lg text-sm"><i class="fa-solid fa-building-user"></i></div>
+                                <div>
+                                    <h3 class="font-semibold text-slate-800 text-sm">Facility Managers & Plumbing Teams</h3>
+                                    <p class="text-xs text-slate-500">Receive real-time geotagged leak reports and prioritize urgent repairs.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <div class="p-2 bg-indigo-500 text-white rounded-lg text-sm"><i class="fa-solid fa-tree"></i></div>
+                                <div>
+                                    <h3 class="font-semibold text-slate-800 text-sm">Residential Communities & Eco Clubs</h3>
+                                    <p class="text-xs text-slate-500">Promote collective sustainability, track community benchmarks, and earn badges.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gamified Flow Step by Step -->
+            <div class="bg-gradient-to-r from-aqua-900 to-slate-900 text-white rounded-3xl p-8 shadow-xl">
+                <div class="text-center max-w-2xl mx-auto mb-8">
+                    <h2 class="text-2xl sm:text-3xl font-bold">How AquaTrack Gamification Works</h2>
+                    <p class="text-slate-300 text-sm mt-2">Empowering individuals through interactive loops of tracking, reporting, and reward badges.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+                    <div class="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-aqua-400 transition-colors">
+                        <div class="w-12 h-12 mx-auto rounded-full bg-aqua-500 text-white flex items-center justify-center font-bold text-lg mb-3">1</div>
+                        <h3 class="font-bold text-base mb-1">Log Readings</h3>
+                        <p class="text-xs text-slate-300">Submit periodic meter readings to track consumption trends.</p>
+                    </div>
+                    <div class="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-aqua-400 transition-colors">
+                        <div class="w-12 h-12 mx-auto rounded-full bg-eco-500 text-white flex items-center justify-center font-bold text-lg mb-3">2</div>
+                        <h3 class="font-bold text-base mb-1">Earn Points</h3>
+                        <p class="text-xs text-slate-300">Receive +25 XP per meter log and +50 XP for reporting active leaks.</p>
+                    </div>
+                    <div class="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-aqua-400 transition-colors">
+                        <div class="w-12 h-12 mx-auto rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-lg mb-3">3</div>
+                        <h3 class="font-bold text-base mb-1">Unlock Badges</h3>
+                        <p class="text-xs text-slate-300">Build streaks and achieve milestones to collect rare eco-badges.</p>
+                    </div>
+                    <div class="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-aqua-400 transition-colors">
+                        <div class="w-12 h-12 mx-auto rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-lg mb-3">4</div>
+                        <h3 class="font-bold text-base mb-1">Climb Ranks</h3>
+                        <p class="text-xs text-slate-300">Compete on campus leaderboards to earn the top "Water Guardian" title.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SDG Alignment Cards -->
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Aligned with UN SDG 6 Targets</h2>
+                        <p class="text-sm text-slate-500">Supporting global Sustainable Development Goals for clean water access.</p>
+                    </div>
+                    <a href="https://sdgs.un.org/goals/goal6" target="_blank" class="text-xs font-semibold text-aqua-600 hover:text-aqua-700 flex items-center gap-1">
+                        UN SDG 6 Details <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <span class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 font-bold text-xs">Target 6.1</span>
+                            <h3 class="font-bold text-slate-800 text-sm">Safe Drinking Water</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">Promoting equitable access to safe and affordable drinking water through systematic monitoring and leak prevention.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <span class="px-2.5 py-1 rounded-lg bg-eco-100 text-eco-800 font-bold text-xs">Target 6.4</span>
+                            <h3 class="font-bold text-slate-800 text-sm">Water-Use Efficiency</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">Substantially increasing water-use efficiency across sectors and ensuring sustainable withdrawals to address scarcity.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold text-xs">Target 6.b</span>
+                            <h3 class="font-bold text-slate-800 text-sm">Community Action</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">Supporting and strengthening the participation of local communities in improving water and sanitation management.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- VIEW 2: DASHBOARD & METER READING SCREEN -->
+        <!-- ================================================================= -->
+        <section id="view-dashboard" class="hidden space-y-8">
+            <!-- Top Dashboard Stats Header -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-medium text-slate-500">Current Period Usage</div>
+                        <div id="kpi-current-usage" class="text-2xl font-bold text-slate-800 mt-1">10.2 m³</div>
+                        <div class="text-xs text-slate-400 mt-0.5">Approx. 10,200 Liters</div>
+                    </div>
+                    <div class="p-3 bg-aqua-50 text-aqua-600 rounded-xl">
+                        <i class="fa-solid fa-faucet-drip text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-medium text-slate-500">Change vs Last Period</div>
+                        <div id="kpi-change-badge" class="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full bg-eco-100 text-eco-700 mt-1">
+                            <i class="fa-solid fa-arrow-down mr-1"></i> -21.4%
+                        </div>
+                        <div class="text-xs text-slate-400 mt-0.5">Saved ~2.8 m³</div>
+                    </div>
+                    <div class="p-3 bg-eco-50 text-eco-600 rounded-xl">
+                        <i class="fa-solid fa-arrow-trend-down text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-medium text-slate-500">Efficiency Grade</div>
+                        <div id="kpi-grade" class="text-2xl font-bold text-eco-600 mt-1">Grade A</div>
+                        <div class="text-xs text-slate-400 mt-0.5">Optimal Usage Range</div>
+                    </div>
+                    <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                        <i class="fa-solid fa-award text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-medium text-slate-500">Est. Cost Savings</div>
+                        <div id="kpi-savings" class="text-2xl font-bold text-indigo-600 mt-1">$42.50</div>
+                        <div class="text-xs text-slate-400 mt-0.5">Based on municipal rates</div>
+                    </div>
+                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i class="fa-solid fa-piggy-bank text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Interactive Meter Log Form -->
+                <div class="lg:col-span-5 bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">Log Meter Reading</h2>
+                            <p class="text-xs text-slate-500">Record cubic meters (m³) from your sub-meter.</p>
+                        </div>
+                        <span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-lg">+25 XP Reward</span>
+                    </div>
+
+                    <form id="meter-form" onsubmit="handleMeterSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Meter Location / Tag</label>
+                            <input type="text" id="meter-tag" required value="Block A - Dorm 3 Submeter" placeholder="e.g. Science Wing Ground Floor" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Previous Reading (m³)</label>
+                                <input type="number" step="0.01" id="prev-reading" required value="128.20" oninput="calculateLiveUsage()" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Current Reading (m³)</label>
+                                <input type="number" step="0.01" id="curr-reading" required value="131.00" oninput="calculateLiveUsage()" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Reading Date</label>
+                            <input type="date" id="meter-date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 text-sm">
+                        </div>
+
+                        <!-- Real-Time Auto Calculation Output Box -->
+                        <div class="bg-aqua-50/70 border border-aqua-200 rounded-xl p-4 space-y-2 text-xs">
+                            <div class="flex justify-between items-center text-slate-700">
+                                <span>Calculated Volume Consumed:</span>
+                                <span id="calc-diff" class="font-bold text-slate-900 text-sm">2.80 m³</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-700">
+                                <span>Equivalent Liters:</span>
+                                <span id="calc-liters" class="font-bold text-aqua-700">2,800 Liters</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-700">
+                                <span>Estimated Daily Rate:</span>
+                                <span id="calc-daily" class="font-semibold text-slate-800">400 L / day</span>
+                            </div>
+                        </div>
+
+                        <div id="meter-error" class="hidden text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200">
+                            Current reading must be equal to or greater than previous reading.
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-aqua-600 hover:bg-aqua-700 text-white font-semibold rounded-xl transition-colors shadow-md shadow-aqua-600/20 flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Save Entry & Claim +25 XP</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Chart Analytics Area -->
+                <div class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">Consumption Trends & Analytics</h2>
+                            <p class="text-xs text-slate-500">Historical volumetric usage across meter logs.</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="btn-chart-weekly" onclick="setChartTimeframe('weekly')" class="px-3 py-1 text-xs font-semibold rounded-lg bg-aqua-600 text-white">Weekly</button>
+                            <button id="btn-chart-monthly" onclick="setChartTimeframe('monthly')" class="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Monthly</button>
+                        </div>
+                    </div>
+
+                    <div class="relative w-full h-72 sm:h-80">
+                        <canvas id="consumptionChart"></canvas>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-aqua-500 inline-block"></span>
+                            <span>Target Threshold: &lt; 3.5 m³ / log</span>
+                        </span>
+                        <span class="font-medium text-eco-600"><i class="fa-solid fa-circle-check"></i> Within Eco Limits</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Table -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Meter Reading Logs</h2>
+                        <p class="text-xs text-slate-500">All submitted historical readings stored locally.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input type="text" id="table-search" oninput="renderMeterTable()" placeholder="Search tag..." class="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 w-44">
+                        </div>
+                        <button onclick="clearAllMeterLogs()" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-semibold transition-colors">
+                            Clear History
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="px-6 py-3">Date</th>
+                                <th class="px-6 py-3">Tag / Location</th>
+                                <th class="px-6 py-3">Previous (m³)</th>
+                                <th class="px-6 py-3">Current (m³)</th>
+                                <th class="px-6 py-3">Difference (m³)</th>
+                                <th class="px-6 py-3">Liters</th>
+                                <th class="px-6 py-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="meter-table-body" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- Injected via Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- VIEW 3: WASTAGE REPORTING SCREEN -->
+        <!-- ================================================================= -->
+        <section id="view-reports" class="hidden space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Leak Reporting Form -->
+                <div class="lg:col-span-5 bg-white rounded-2xl p-6 shadow-sm border border-slate-200 h-fit">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">Report Water Wastage</h2>
+                            <p class="text-xs text-slate-500">Spot a leak? Log it to notify facility engineering.</p>
+                        </div>
+                        <span class="px-2.5 py-1 bg-eco-100 text-eco-800 text-xs font-bold rounded-lg">+50 XP Reward</span>
+                    </div>
+
+                    <form id="report-form" onsubmit="handleReportSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Specific Location</label>
+                            <input type="text" id="report-location" required placeholder="e.g. Science Block 2nd Floor Washroom" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Issue Type</label>
+                            <select id="report-type" required class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 text-sm bg-white">
+                                <option value="Pipe Fracture / Leak">Pipe Fracture / Leak</option>
+                                <option value="Overhead Tank Overflow">Overhead Tank Overflow</option>
+                                <option value="Broken Tap / Valve">Broken Tap / Valve</option>
+                                <option value="Continuous Running Toilet">Continuous Running Toilet</option>
+                                <option value="Damage Irrigation Sprinkler">Damaged Irrigation Sprinkler</option>
+                                <option value="Other Water Wastage">Other Water Wastage</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Severity Level</label>
+                            <div class="grid grid-cols-4 gap-2">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="severity" value="Low" class="peer hidden" checked>
+                                    <div class="p-2 text-center border border-slate-200 rounded-xl text-xs font-semibold peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 transition-colors">Low</div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="severity" value="Medium" class="peer hidden">
+                                    <div class="p-2 text-center border border-slate-200 rounded-xl text-xs font-semibold peer-checked:bg-amber-50 peer-checked:border-amber-500 peer-checked:text-amber-700 transition-colors">Medium</div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="severity" value="High" class="peer hidden">
+                                    <div class="p-2 text-center border border-slate-200 rounded-xl text-xs font-semibold peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 transition-colors">High</div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="severity" value="Critical" class="peer hidden">
+                                    <div class="p-2 text-center border border-slate-200 rounded-xl text-xs font-semibold peer-checked:bg-red-50 peer-checked:border-red-500 peer-checked:text-red-700 transition-colors">Critical</div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Description & Details</label>
+                            <textarea id="report-desc" rows="3" required placeholder="Describe dripping rate, visible damage, or access instructions..." class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-aqua-500 text-sm"></textarea>
+                        </div>
+
+                        <!-- Photo Upload Simulation -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Photo Evidence (Optional Simulation)</label>
+                            <div class="flex items-center gap-3">
+                                <label class="flex-grow cursor-pointer border-2 border-dashed border-slate-300 hover:border-aqua-500 rounded-xl p-3 text-center transition-colors bg-slate-50">
+                                    <i class="fa-solid fa-camera text-slate-400 text-base mb-1 block"></i>
+                                    <span class="text-xs text-slate-600">Click to upload photo</span>
+                                    <input type="file" id="report-photo" accept="image/*" onchange="previewReportPhoto(event)" class="hidden">
+                                </label>
+                                <div id="photo-preview-container" class="hidden w-16 h-16 rounded-xl border border-slate-200 overflow-hidden relative">
+                                    <img id="photo-preview-img" src="" alt="Preview" class="w-full h-full object-cover">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-eco-600 hover:bg-eco-700 text-white font-semibold rounded-xl transition-colors shadow-md shadow-eco-600/20 flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Submit Wastage Report (+50 XP)</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Live Tracker Stream -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">Live Status Tracker</h2>
+                            <p class="text-xs text-slate-500">Track report progress in real-time or simulate admin updates.</p>
+                        </div>
+                        <div class="flex space-x-2 text-xs">
+                            <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">All Reports</span>
+                        </div>
+                    </div>
+
+                    <!-- Reports Container List -->
+                    <div id="reports-container" class="space-y-4">
+                        <!-- Injected via Javascript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- VIEW 4: GAMIFICATION & LEADERBOARD SCREEN -->
+        <!-- ================================================================= -->
+        <section id="view-gamification" class="hidden space-y-8">
+            <!-- User Status Card -->
+            <div class="bg-gradient-to-r from-slate-900 via-aqua-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800">
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <!-- Avatar Badge -->
+                    <div class="relative">
+                        <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-aqua-500 to-eco-400 p-1.5 shadow-lg">
+                            <div class="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-4xl text-aqua-300">
+                                <i class="fa-solid fa-user-astronaut"></i>
+                            </div>
+                        </div>
+                        <span id="user-level-badge" class="absolute -bottom-1 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-eco-500 text-white font-bold text-xs whitespace-nowrap shadow-md">
+                            Water Saver
+                        </span>
+                    </div>
+
+                    <!-- XP Details & Progress Bar -->
+                    <div class="flex-grow text-center md:text-left space-y-3 w-full">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Alex Green</h2>
+                                <p class="text-xs text-slate-400">Campus Resident • Block A - Room 302</p>
+                            </div>
+                            <div class="inline-flex items-center justify-center space-x-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md">
+                                <i class="fa-solid fa-fire text-orange-400 text-lg"></i>
+                                <div class="text-left">
+                                    <div id="user-streak-display" class="text-sm font-bold text-white">5-Day Streak 🔥</div>
+                                    <div class="text-[10px] text-slate-300">Log daily to keep streak</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span class="text-aqua-300">Level Progress</span>
+                                <span id="user-xp-text" class="text-slate-300">340 / 500 XP</span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                                <div id="user-xp-bar" class="h-full bg-gradient-to-r from-aqua-500 to-eco-400 rounded-full transition-all duration-500" style="width: 68%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Quests / Goals Section -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Active Missions & Quests</h2>
+                        <p class="text-xs text-slate-500">Complete daily tasks to collect bonus XP rewards.</p>
+                    </div>
+                    <span class="text-xs font-bold text-aqua-600">Resets in 18 hrs</span>
+                </div>
+
+                <div id="quests-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Injected via Javascript -->
+                </div>
+            </div>
+
+            <!-- Badges Collection Grid -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Conservation Badges</h2>
+                        <p class="text-xs text-slate-500">Earn recognition for consistent monitoring and report verification.</p>
+                    </div>
+                    <span id="badges-unlocked-count" class="px-3 py-1 bg-aqua-100 text-aqua-800 rounded-full font-bold text-xs">4 / 6 Unlocked</span>
+                </div>
+
+                <div id="badges-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <!-- Injected via Javascript -->
+                </div>
+            </div>
+
+            <!-- Community Leaderboard -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Community Leaderboard</h2>
+                        <p class="text-xs text-slate-500">Top water guardians across dormitories and facilities.</p>
+                    </div>
+                    
+                    <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                        <button id="lb-tab-all" onclick="filterLeaderboard('all')" class="px-3 py-1.5 rounded-lg bg-white text-slate-800 shadow-sm">Overall</button>
+                        <button id="lb-tab-dorms" onclick="filterLeaderboard('dorms')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-800">Campus Dorms</button>
+                        <button id="lb-tab-facilities" onclick="filterLeaderboard('facilities')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-800">Facilities</button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="px-6 py-3">Rank</th>
+                                <th class="px-6 py-3">Participant / Group</th>
+                                <th class="px-6 py-3">Level Tier</th>
+                                <th class="px-6 py-3">Badges</th>
+                                <th class="px-6 py-3 text-right">Total XP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- Injected via Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER & REFERENCES SECTION -->
+    <footer class="bg-slate-900 text-slate-400 border-t border-slate-800 mt-12 py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 text-xs">
+                <!-- Col 1 -->
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-2 text-white font-bold text-base">
+                        <i class="fa-solid fa-droplet text-aqua-400"></i>
+                        <span>AquaTrack Portal</span>
+                    </div>
+                    <p class="leading-relaxed">A gamified water conservation and monitoring dashboard advancing United Nations Sustainable Development Goal 6 (SDG 6).</p>
+                </div>
+
+                <!-- Col 2 -->
+                <div>
+                    <h4 class="text-slate-200 font-semibold mb-3 text-sm">Standards & References</h4>
+                    <ul class="space-y-2">
+                        <li><a href="https://sdgs.un.org/goals/goal6" target="_blank" class="hover:text-aqua-400 transition-colors"><i class="fa-solid fa-up-right-from-square mr-1"></i> UN SDG 6 Official Framework</a></li>
+                        <li><a href="https://www.iso.org/iso-14001-environmental-management.html" target="_blank" class="hover:text-aqua-400 transition-colors"><i class="fa-solid fa-up-right-from-square mr-1"></i> ISO 14001 Env. Standard</a></li>
+                        <li><a href="https://www.epa.gov/watersense" target="_blank" class="hover:text-aqua-400 transition-colors"><i class="fa-solid fa-up-right-from-square mr-1"></i> EPA WaterSense Guidelines</a></li>
+                        <li><a href="https://www.chartjs.org/" target="_blank" class="hover:text-aqua-400 transition-colors"><i class="fa-solid fa-up-right-from-square mr-1"></i> Chart.js Visualization Engine</a></li>
+                    </ul>
+                </div>
+
+                <!-- Col 3 -->
+                <div>
+                    <h4 class="text-slate-200 font-semibold mb-3 text-sm">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><button onclick="switchTab('home')" class="hover:text-aqua-400 transition-colors">Home & Overview</button></li>
+                        <li><button onclick="switchTab('dashboard')" class="hover:text-aqua-400 transition-colors">Meter Reading Dashboard</button></li>
+                        <li><button onclick="switchTab('reports')" class="hover:text-aqua-400 transition-colors">Report Active Wastage</button></li>
+                        <li><button onclick="switchTab('gamification')" class="hover:text-aqua-400 transition-colors">Gamification Leaderboard</button></li>
+                    </ul>
+                </div>
+
+                <!-- Col 4 -->
+                <div>
+                    <h4 class="text-slate-200 font-semibold mb-3 text-sm">Demo State Control</h4>
+                    <p class="mb-3">Need to test fresh submissions or reset local persistence?</p>
+                    <button onclick="resetDemoData()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-semibold transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-right text-amber-400"></i> Reset Demo Local Data
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t border-slate-800 text-center text-slate-500 text-xs flex flex-col sm:flex-row justify-between items-center gap-2">
+                <span>&copy; 2026 AquaTrack Monitoring Portal. Built for SDG 6 Clean Water & Sanitation.</span>
+                <span class="text-slate-400">Version 2.4 • Production Ready</span>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- APPLICATION JAVASCRIPT CODE -->
+    <script>
+        // =====================================================================
+        // STATE MANAGEMENT & DEFAULT SEED DATA
+        // =====================================================================
+        const DEFAULT_STATE = {
+            user: {
+                name: "Alex Green",
+                points: 340,
+                streak: 5,
+                levelTitle: "Water Saver",
+                levelIndex: 1,
+                xp: 340,
+                nextLevelXp: 500
+            },
+            meterLogs: [
+                { id: 'm1', date: '2026-09-12', tag: 'Block A - Dorm 3 Submeter', prev: 120.00, curr: 124.50, diff: 4.50, liters: 4500 },
+                { id: 'm2', date: '2026-09-15', tag: 'Block A - Dorm 3 Submeter', prev: 124.50, curr: 128.20, diff: 3.70, liters: 3700 },
+                { id: 'm3', date: '2026-09-18', tag: 'Block A - Dorm 3 Submeter', prev: 128.20, curr: 131.00, diff: 2.80, liters: 2800 },
+                { id: 'm4', date: '2026-09-21', tag: 'Block A - Dorm 3 Submeter', prev: 131.00, curr: 133.20, diff: 2.20, liters: 2200 }
+            ],
+            reports: [
+                {
+                    id: 'r1',
+                    location: 'Science Block - 2nd Floor Washroom',
+                    type: 'Pipe Fracture / Leak',
+                    severity: 'High',
+                    desc: 'Geysering joint beneath sink 4. Water trickling into hallway.',
+                    date: '2026-09-20',
+                    status: 'In Progress',
+                    photo: null
+                },
+                {
+                    id: 'r2',
+                    location: 'Hostel C - Ground Floor Restroom',
+                    type: 'Continuous Running Toilet',
+                    severity: 'Medium',
+                    desc: 'Flush valve valve seal corroded, steady leaking.',
+                    date: '2026-09-18',
+                    status: 'Resolved',
+                    photo: null
+                },
+                {
+                    id: 'r3',
+                    location: 'Main Quadrangle Lawn',
+                    type: 'Damage Irrigation Sprinkler',
+                    severity: 'Low',
+                    desc: 'Sprinkler head spraying directly onto pavement.',
+                    date: '2026-09-22',
+                    status: 'Under Review',
+                    photo: null
+                }
+            ],
+            badges: [
+                { id: 'b1', title: 'First Step', desc: 'Log 1 meter reading', icon: 'fa-faucet', unlocked: true },
+                { id: 'b2', title: 'Leak Hunter', desc: 'Report 1 wastage issue', icon: 'fa-magnifying-glass-chart', unlocked: true },
+                { id: 'b3', title: '5-Day Streak', desc: 'Maintain 5 consecutive active days', icon: 'fa-fire', unlocked: true },
+                { id: 'b4', title: 'Efficiency Elite', desc: 'Maintain usage under 3.0 m³', icon: 'fa-gauge-high', unlocked: true },
+                { id: 'b5', title: 'Hydro Guardian', desc: 'Reach 500 XP points', icon: 'fa-shield-halved', unlocked: false },
+                { id: 'b6', title: 'Master Conserver', desc: 'Save over 10,000 Liters total', icon: 'fa-crown', unlocked: false }
+            ],
+            quests: [
+                { id: 'q1', title: 'Log Meter Entry', target: 1, current: 1, reward: 30, claimed: false },
+                { id: 'q2', title: 'Report Water Leak', target: 1, current: 1, reward: 50, claimed: true },
+                { id: 'q3', title: 'Maintain 7-Day Streak', target: 7, current: 5, reward: 100, claimed: false }
+            ],
+            leaderboard: [
+                { rank: 1, name: 'Block B - Eco Ninjas', type: 'dorms', level: 'Water Guardian', badges: 8, points: 890 },
+                { rank: 2, name: 'Science Complex Facility', type: 'facilities', level: 'Water Warrior', badges: 6, points: 720 },
+                { rank: 3, name: 'Alex Green (You)', type: 'dorms', level: 'Water Saver', badges: 4, points: 340, isUser: true },
+                { rank: 4, name: 'Hostel C Block', type: 'dorms', level: 'Water Novice', badges: 3, points: 290 },
+                { rank: 5, name: 'Central Quad Turf Team', type: 'facilities', level: 'Water Novice', badges: 2, points: 210 }
+            ]
+        };
+
+        let appState = {};
+        let consumptionChartInstance = null;
+
+        function loadState() {
+            const saved = localStorage.getItem('aquatrack_state');
+            if (saved) {
+                try {
+                    appState = JSON.parse(saved);
+                } catch (e) {
+                    appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                }
+            } else {
+                appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                saveState();
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('aquatrack_state', JSON.stringify(appState));
+            updateGlobalUI();
+        }
+
+        function resetDemoData() {
+            localStorage.removeItem('aquatrack_state');
+            appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            saveState();
+            initChart();
+            showToast('Demo Reset', 'State has been restored to default sample data.', 'fa-arrow-rotate-left', 'info');
+            renderAllViews();
+        }
+
+        function switchTab(tabId) {
+            const tabs = ['home', 'dashboard', 'reports', 'gamification'];
+            tabs.forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`nav-${t}`);
+                if (t === tabId) {
+                    view.classList.remove('hidden');
+                    if (btn) {
+                        btn.classList.add('bg-aqua-50', 'text-aqua-600');
+                        btn.classList.remove('text-slate-600');
+                    }
+                } else {
+                    view.classList.add('hidden');
+                    if (btn) {
+                        btn.classList.remove('bg-aqua-50', 'text-aqua-600');
+                        btn.classList.add('text-slate-600');
+                    }
+                }
+            });
+
+            // Re-render chart if switching to dashboard
+            if (tabId === 'dashboard') {
+                setTimeout(() => {
+                    if (consumptionChartInstance) {
+                        consumptionChartInstance.resize();
+                        consumptionChartInstance.update();
+                    } else {
+                        initChart();
+                    }
+                }, 100);
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function showToast(title, message, icon = 'fa-circle-check', type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const colorMap = {
+                success: 'border-eco-500 text-eco-600 bg-white',
+                info: 'border-aqua-500 text-aqua-600 bg-white',
+                warning: 'border-amber-500 text-amber-600 bg-white'
+            };
+
+            toast.className = `toast-enter pointer-events-auto flex items-start space-x-3 p-4 rounded-2xl shadow-xl border-l-4 ${colorMap[type] || colorMap.success} border border-slate-100`;
+            toast.innerHTML = `
+                <div class="text-xl mt-0.5"><i class="fa-solid ${icon}"></i></div>
+                <div class="flex-grow pr-2">
+                    <h4 class="font-bold text-slate-800 text-xs sm:text-sm">${title}</h4>
+                    <p class="text-xs text-slate-500 leading-snug mt-0.5">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600 text-xs">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                if (toast.parentElement) toast.remove();
+            }, 4500);
+        }
+
+        function addPoints(amount, reason) {
+            appState.user.points += amount;
+            appState.user.xp += amount;
+            
+            // Check level upgrade
+            const levels = [
+                { name: 'Water Novice', minXp: 0 },
+                { name: 'Water Saver', minXp: 200 },
+                { name: 'Water Warrior', minXp: 500 },
+                { name: 'Water Guardian', minXp: 900 }
+            ];
+
+            let newLevel = appState.user.levelTitle;
+            let newIndex = appState.user.levelIndex;
+
+            for (let i = levels.length - 1; i >= 0; i--) {
+                if (appState.user.xp >= levels[i].minXp) {
+                    newLevel = levels[i].name;
+                    newIndex = i;
+                    break;
+                }
+            }
+
+            if (newLevel !== appState.user.levelTitle) {
+                appState.user.levelTitle = newLevel;
+                appState.user.levelIndex = newIndex;
+                showToast('LEVEL UP! 🎉', `You have advanced to ${newLevel}!`, 'fa-trophy', 'warning');
+            } else {
+                showToast(`+${amount} XP Earned!`, reason, 'fa-coins', 'success');
+            }
+
+            // Sync with leaderboard entry
+            const userLb = appState.leaderboard.find(item => item.isUser);
+            if (userLb) {
+                userLb.points = appState.user.points;
+                userLb.level = appState.user.levelTitle;
+            }
+
+            checkBadgeUnlocks();
+            saveState();
+            renderAllViews();
+        }
+
+        function checkBadgeUnlocks() {
+            // b1: First Step (Log 1 meter reading)
+            if (appState.meterLogs.length >= 1) unlockBadge('b1');
+            // b2: Leak Hunter (Report 1 wastage issue)
+            if (appState.reports.length >= 1) unlockBadge('b2');
+            // b3: 5-Day Streak
+            if (appState.user.streak >= 5) unlockBadge('b3');
+            // b4: Efficiency Elite
+            const hasLowLog = appState.meterLogs.some(l => l.diff <= 3.0);
+            if (hasLowLog) unlockBadge('b4');
+            // b5: Hydro Guardian (500 XP)
+            if (appState.user.xp >= 500) unlockBadge('b5');
+        }
+
+        function unlockBadge(badgeId) {
+            const badge = appState.badges.find(b => b.id === badgeId);
+            if (badge && !badge.unlocked) {
+                badge.unlocked = true;
+                showToast('Badge Unlocked! 🏅', `You earned the "${badge.title}" badge!`, 'fa-award', 'warning');
+                
+                // Update badge count in user leaderboard
+                const userLb = appState.leaderboard.find(item => item.isUser);
+                if (userLb) userLb.badges += 1;
+            }
+        }
+
+        function updateGlobalUI() {
+            document.getElementById('nav-user-points').innerText = appState.user.points;
+            document.getElementById('nav-user-streak').innerText = appState.user.streak;
+
+            // Gamification View updates
+            const xpText = document.getElementById('user-xp-text');
+            const xpBar = document.getElementById('user-xp-bar');
+            const levelBadge = document.getElementById('user-level-badge');
+            const streakDisplay = document.getElementById('user-streak-display');
+
+            if (xpText) xpText.innerText = `${appState.user.xp} / 500 XP`;
+            if (xpBar) xpBar.style.width = `${Math.min(100, (appState.user.xp / 500) * 100)}%`;
+            if (levelBadge) levelBadge.innerText = appState.user.levelTitle;
+            if (streakDisplay) streakDisplay.innerText = `${appState.user.streak}-Day Streak 🔥`;
+        }
+
+
+        // =====================================================================
+        // VIEW 2: METER READING & CHART LOGIC
+        // =====================================================================
+        function calculateLiveUsage() {
+            const prev = parseFloat(document.getElementById('prev-reading').value) || 0;
+            const curr = parseFloat(document.getElementById('curr-reading').value) || 0;
+            const errorBox = document.getElementById('meter-error');
+
+            if (curr < prev) {
+                errorBox.classList.remove('hidden');
+            } else {
+                errorBox.classList.add('hidden');
+            }
+
+            const diff = Math.max(0, curr - prev);
+            const liters = Math.round(diff * 1000);
+            const daily = Math.round(liters / 7);
+
+            document.getElementById('calc-diff').innerText = `${diff.toFixed(2)} m³`;
+            document.getElementById('calc-liters').innerText = `${liters.toLocaleString()} Liters`;
+            document.getElementById('calc-daily').innerText = `~${daily} L / day`;
+        }
+
+        function handleMeterSubmit(e) {
+            e.preventDefault();
+            const tag = document.getElementById('meter-tag').value.trim();
+            const prev = parseFloat(document.getElementById('prev-reading').value);
+            const curr = parseFloat(document.getElementById('curr-reading').value);
+            const date = document.getElementById('meter-date').value;
+
+            if (curr < prev) {
+                showToast('Validation Error', 'Current reading cannot be lower than previous reading.', 'fa-circle-xmark', 'warning');
+                return;
+            }
+
+            const diff = parseFloat((curr - prev).toFixed(2));
+            const liters = Math.round(diff * 1000);
+
+            const newEntry = {
+                id: 'm_' + Date.now(),
+                date: date,
+                tag: tag,
+                prev: prev,
+                curr: curr,
+                diff: diff,
+                liters: liters
+            };
+
+            appState.meterLogs.unshift(newEntry);
+            
+            // Auto update previous reading input for next time
+            document.getElementById('prev-reading').value = curr.toFixed(2);
+            document.getElementById('curr-reading').value = (curr + 2.50).toFixed(2);
+            calculateLiveUsage();
+
+            // Update quest progress
+            const q1 = appState.quests.find(q => q.id === 'q1');
+            if (q1) q1.current = Math.min(q1.target, q1.current + 1);
+
+            addPoints(25, 'Logged water meter reading');
+            renderMeterTable();
+            updateChartData();
+        }
+
+        function renderMeterTable() {
+            const tbody = document.getElementById('meter-table-body');
+            const search = document.getElementById('table-search').value.toLowerCase();
+            
+            const filtered = appState.meterLogs.filter(log => log.tag.toLowerCase().includes(search));
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-slate-400">
+                            No meter logs found matching your criteria.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(log => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-3.5 font-medium text-slate-800">${log.date}</td>
+                    <td class="px-6 py-3.5">${log.tag}</td>
+                    <td class="px-6 py-3.5 font-mono">${log.prev.toFixed(2)}</td>
+                    <td class="px-6 py-3.5 font-mono">${log.curr.toFixed(2)}</td>
+                    <td class="px-6 py-3.5 font-bold text-aqua-700 font-mono">+${log.diff.toFixed(2)}</td>
+                    <td class="px-6 py-3.5 font-semibold text-slate-700">${log.liters.toLocaleString()} L</td>
+                    <td class="px-6 py-3.5 text-right">
+                        <button onclick="deleteMeterLog('${log.id}')" class="text-slate-400 hover:text-red-600 transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteMeterLog(id) {
+            appState.meterLogs = appState.meterLogs.filter(l => l.id !== id);
+            saveState();
+            renderMeterTable();
+            updateChartData();
+            showToast('Entry Removed', 'Meter log entry was deleted.', 'fa-trash', 'info');
+        }
+
+        function clearAllMeterLogs() {
+            if (confirm("Clear all meter reading history?")) {
+                appState.meterLogs = [];
+                saveState();
+                renderMeterTable();
+                updateChartData();
+                showToast('Cleared History', 'All meter entries have been wiped.', 'fa-check', 'info');
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('consumptionChart');
+            if (!ctx) return;
+
+            // Sort logs by date ascending
+            const sorted = [...appState.meterLogs].reverse();
+            const labels = sorted.map(l => l.date);
+            const data = sorted.map(l => l.diff);
+
+            if (consumptionChartInstance) {
+                consumptionChartInstance.destroy();
+            }
+
+            consumptionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Consumption (m³)',
+                        data: data.length ? data : [0],
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.12)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#0ea5e9',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            padding: 12,
+                            titleFont: { size: 12, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            callbacks: {
+                                label: function(context) {
+                                    return ` Usage: ${context.parsed.y} m³ (${(context.parsed.y * 1000).toLocaleString()} Liters)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                callback: function(value) { return value + ' m³'; }
+                            }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChartData() {
+            if (!consumptionChartInstance) {
+                initChart();
+                return;
+            }
+            const sorted = [...appState.meterLogs].reverse();
+            consumptionChartInstance.data.labels = sorted.map(l => l.date);
+            consumptionChartInstance.data.datasets[0].data = sorted.map(l => l.diff);
+            consumptionChartInstance.update();
+        }
+
+        function setChartTimeframe(mode) {
+            const btnW = document.getElementById('btn-chart-weekly');
+            const btnM = document.getElementById('btn-chart-monthly');
+            if (mode === 'weekly') {
+                btnW.className = 'px-3 py-1 text-xs font-semibold rounded-lg bg-aqua-600 text-white';
+                btnM.className = 'px-3 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200';
+            } else {
+                btnM.className = 'px-3 py-1 text-xs font-semibold rounded-lg bg-aqua-600 text-white';
+                btnW.className = 'px-3 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200';
+            }
+            updateChartData();
+        }
+
+
+        // =====================================================================
+        // VIEW 3: WASTAGE REPORTING LOGIC
+        // =====================================================================
+        function previewReportPhoto(e) {
+            const file = e.target.files[0];
+            const container = document.getElementById('photo-preview-container');
+            const img = document.getElementById('photo-preview-img');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    img.src = evt.target.result;
+                    container.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleReportSubmit(e) {
+            e.preventDefault();
+            const location = document.getElementById('report-location').value.trim();
+            const type = document.getElementById('report-type').value;
+            const severity = document.querySelector('input[name="severity"]:checked').value;
+            const desc = document.getElementById('report-desc').value.trim();
+            const today = new Date().toISOString().split('T')[0];
+
+            const newReport = {
+                id: 'r_' + Date.now(),
+                location: location,
+                type: type,
+                severity: severity,
+                desc: desc,
+                date: today,
+                status: 'Pending',
+                photo: document.getElementById('photo-preview-img').src || null
+            };
+
+            appState.reports.unshift(newReport);
+            
+            // Reset form
+            document.getElementById('report-form').reset();
+            document.getElementById('photo-preview-container').classList.add('hidden');
+
+            addPoints(50, 'Submitted water wastage report');
+            renderReportsList();
+        }
+
+        function renderReportsList() {
+            const container = document.getElementById('reports-container');
+            if (!container) return;
+
+            if (appState.reports.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 text-center text-slate-400 border border-slate-200">
+                        No active water wastage reports logged yet.
+                    </div>
+                `;
+                return;
+            }
+
+            const statusColors = {
+                'Pending': 'bg-amber-100 text-amber-800 border-amber-300',
+                'Under Review': 'bg-blue-100 text-blue-800 border-blue-300',
+                'In Progress': 'bg-purple-100 text-purple-800 border-purple-300',
+                'Resolved': 'bg-eco-100 text-eco-800 border-eco-300'
+            };
+
+            const severityColors = {
+                'Low': 'text-blue-600 bg-blue-50',
+                'Medium': 'text-amber-600 bg-amber-50',
+                'High': 'text-orange-600 bg-orange-50',
+                'Critical': 'text-red-600 bg-red-50'
+            };
+
+            container.innerHTML = appState.reports.map(rep => `
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-1 text-xs font-bold rounded-lg border ${statusColors[rep.status]}">
+                                ${rep.status}
+                            </span>
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-md ${severityColors[rep.severity]}">
+                                ${rep.severity} Severity
+                            </span>
+                        </div>
+                        <span class="text-xs text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>${rep.date}</span>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">${rep.type}</h3>
+                        <p class="text-xs font-semibold text-aqua-700 mt-0.5"><i class="fa-solid fa-location-dot mr-1"></i>${rep.location}</p>
+                        <p class="text-xs text-slate-600 mt-2 leading-relaxed">${rep.desc}</p>
+                    </div>
+
+                    ${rep.photo ? `
+                        <div class="mt-2">
+                            <img src="${rep.photo}" alt="Evidence" class="w-20 h-20 object-cover rounded-xl border border-slate-200">
+                        </div>
+                    ` : ''}
+
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400">Reporter: Alex Green (+50 XP Claimed)</span>
+                        
+                        <!-- Tester Admin Simulation Action -->
+                        <button onclick="advanceReportStatus('${rep.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-aqua-50 hover:text-aqua-700 text-slate-700 text-xs font-semibold rounded-xl transition-colors flex items-center space-x-1">
+                            <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                            <span>Advance Status</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function advanceReportStatus(id) {
+            const report = appState.reports.find(r => r.id === id);
+            if (!report) return;
+
+            const stages = ['Pending', 'Under Review', 'In Progress', 'Resolved'];
+            const currentIndex = stages.indexOf(report.status);
+            const nextIndex = (currentIndex + 1) % stages.length;
+
+            report.status = stages[nextIndex];
+
+            if (report.status === 'Resolved') {
+                addPoints(30, 'Bonus: Reported leak issue resolved by facility!');
+            } else {
+                saveState();
+                renderReportsList();
+                showToast('Status Updated', `Report moved to "${report.status}"`, 'fa-info-circle', 'info');
+            }
+        }
+
+
+        // =====================================================================
+        // VIEW 4: GAMIFICATION & LEADERBOARD LOGIC
+        // =====================================================================
+        function renderQuests() {
+            const container = document.getElementById('quests-grid');
+            if (!container) return;
+
+            container.innerHTML = appState.quests.map(q => {
+                const isComplete = q.current >= q.target;
+                return `
+                    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-bold text-slate-800 text-sm">${q.title}</h3>
+                                <span class="text-xs font-bold text-amber-600">+${q.reward} XP</span>
+                            </div>
+                            <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                                <span>Progress</span>
+                                <span class="font-semibold">${q.current} / ${q.target}</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-200 rounded-full mt-1 overflow-hidden">
+                                <div class="h-full bg-aqua-500 rounded-full" style="width: ${(q.current / q.target) * 100}%"></div>
+                            </div>
+                        </div>
+
+                        ${q.claimed ? `
+                            <button disabled class="w-full py-1.5 bg-slate-200 text-slate-500 font-semibold text-xs rounded-lg cursor-not-allowed">
+                                <i class="fa-solid fa-check mr-1"></i> Claimed
+                            </button>
+                        ` : `
+                            <button onclick="claimQuest('${q.id}')" ${!isComplete ? 'disabled' : ''} class="w-full py-1.5 ${isComplete ? 'bg-eco-600 hover:bg-eco-700 text-white shadow-md shadow-eco-600/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed'} font-semibold text-xs rounded-lg transition-colors">
+                                ${isComplete ? 'Claim Reward' : 'In Progress'}
+                            </button>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function claimQuest(questId) {
+            const quest = appState.quests.find(q => q.id === questId);
+            if (quest && !quest.claimed && quest.current >= quest.target) {
+                quest.claimed = true;
+                addPoints(quest.reward, `Completed quest: ${quest.title}`);
+                renderQuests();
+            }
+        }
+
+        function renderBadges() {
+            const container = document.getElementById('badges-grid');
+            const unlockedCounter = document.getElementById('badges-unlocked-count');
+            if (!container) return;
+
+            const unlocked = appState.badges.filter(b => b.unlocked).length;
+            if (unlockedCounter) unlockedCounter.innerText = `${unlocked} / ${appState.badges.length} Unlocked`;
+
+            container.innerHTML = appState.badges.map(b => `
+                <div class="p-4 rounded-2xl border text-center transition-all ${b.unlocked ? 'bg-white border-aqua-200 shadow-sm' : 'bg-slate-50 border-slate-200 opacity-60'} flex flex-col items-center justify-between">
+                    <div class="w-12 h-12 rounded-2xl ${b.unlocked ? 'bg-gradient-to-tr from-aqua-500 to-eco-400 text-white' : 'bg-slate-200 text-slate-400'} flex items-center justify-center text-xl mb-2 shadow-sm">
+                        <i class="fa-solid ${b.icon}"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-xs">${b.title}</h4>
+                        <p class="text-[10px] text-slate-500 leading-tight mt-1">${b.desc}</p>
+                    </div>
+                    <span class="mt-3 text-[10px] font-bold ${b.unlocked ? 'text-eco-600 bg-eco-50 px-2 py-0.5 rounded-full' : 'text-slate-400'}">
+                        ${b.unlocked ? 'Unlocked' : 'Locked'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        let currentLbFilter = 'all';
+
+        function filterLeaderboard(category) {
+            currentLbFilter = category;
+            
+            ['all', 'dorms', 'facilities'].forEach(c => {
+                const btn = document.getElementById(`lb-tab-${c}`);
+                if (c === category) {
+                    btn.className = 'px-3 py-1.5 rounded-lg bg-white text-slate-800 shadow-sm font-bold';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-800 font-medium';
+                }
+            });
+
+            renderLeaderboard();
+        }
+
+        function renderLeaderboard() {
+            const tbody = document.getElementById('leaderboard-body');
+            if (!tbody) return;
+
+            let filtered = [...appState.leaderboard];
+            if (currentLbFilter !== 'all') {
+                filtered = filtered.filter(item => item.type === currentLbFilter);
+            }
+
+            // Sort by points descending
+            filtered.sort((a, b) => b.points - a.points);
+
+            const medalIcons = [
+                '<span class="w-6 h-6 rounded-full bg-amber-400 text-white inline-flex items-center justify-center font-bold text-xs shadow-sm"><i class="fa-solid fa-crown text-[10px]"></i></span>',
+                '<span class="w-6 h-6 rounded-full bg-slate-300 text-slate-800 inline-flex items-center justify-center font-bold text-xs shadow-sm">2</span>',
+                '<span class="w-6 h-6 rounded-full bg-amber-700 text-white inline-flex items-center justify-center font-bold text-xs shadow-sm">3</span>'
+            ];
+
+            tbody.innerHTML = filtered.map((item, idx) => `
+                <tr class="${item.isUser ? 'bg-aqua-50/80 font-semibold' : 'hover:bg-slate-50'} transition-colors">
+                    <td class="px-6 py-3.5">
+                        ${idx < 3 ? medalIcons[idx] : `<span class="text-slate-500 font-semibold pl-2">${idx + 1}</span>`}
+                    </td>
+                    <td class="px-6 py-3.5">
+                        <span class="text-slate-900 font-bold">${item.name}</span>
+                        ${item.isUser ? '<span class="ml-2 px-2 py-0.5 bg-aqua-600 text-white rounded-md text-[10px]">You</span>' : ''}
+                    </td>
+                    <td class="px-6 py-3.5 text-slate-600">${item.level}</td>
+                    <td class="px-6 py-3.5 font-semibold text-slate-700"><i class="fa-solid fa-award text-amber-500 mr-1"></i>${item.badges} Badges</td>
+                    <td class="px-6 py-3.5 text-right font-black text-slate-900">${item.points} <span class="text-slate-400 text-[10px] font-normal">XP</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderAllViews() {
+            renderMeterTable();
+            renderReportsList();
+            renderQuests();
+            renderBadges();
+            renderLeaderboard();
+            updateGlobalUI();
+        }
+
+        window.onload = function() {
+            loadState();
+            
+            // Default current reading date to today
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('meter-date');
+            if (dateInput) dateInput.value = today;
+
+            calculateLiveUsage();
+            renderAllViews();
+            initChart();
+        };
+    </script>
+</body>
+</html>
